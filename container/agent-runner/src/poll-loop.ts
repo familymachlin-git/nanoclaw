@@ -43,6 +43,15 @@ export function isCorruptionError(msg: string): boolean {
   );
 }
 
+/**
+ * Provider/runtime housekeeping results are not user-facing agent replies.
+ * They should not trigger the unwrapped-output repair prompt.
+ */
+export function isInternalStatusResult(text: string): boolean {
+  const trimmed = text.trim();
+  return /^Context compacted \([\d,]+ tokens compacted\)\.?$/.test(trimmed);
+}
+
 function log(msg: string): void {
   console.error(`[poll-loop] ${msg}`);
 }
@@ -455,6 +464,10 @@ async function processQuery(
         // at all — either way the turn is finished.
         markCompleted(initialBatchIds);
         if (event.text) {
+          if (isInternalStatusResult(event.text)) {
+            log(`[internal-status] ${event.text.slice(0, 200)}`);
+            continue;
+          }
           const { hasUnwrapped } = dispatchResultText(event.text, routing);
           if (hasUnwrapped && !unwrappedNudged) {
             unwrappedNudged = true;

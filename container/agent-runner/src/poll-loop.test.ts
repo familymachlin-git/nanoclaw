@@ -4,7 +4,7 @@ import { initTestSessionDb, closeSessionDb, getInboundDb, getOutboundDb } from '
 import { getPendingMessages, markCompleted } from './db/messages-in.js';
 import { getUndeliveredMessages } from './db/messages-out.js';
 import { formatMessages, extractRouting } from './formatter.js';
-import { isCorruptionError } from './poll-loop.js';
+import { isCorruptionError, isInternalStatusResult } from './poll-loop.js';
 import { MockProvider } from './providers/mock.js';
 
 beforeEach(() => {
@@ -376,6 +376,17 @@ describe('end-to-end with mock provider', () => {
     expect(outMessages).toHaveLength(1);
     expect(JSON.parse(outMessages[0].content).text).toBe('The answer is 4');
     expect(outMessages[0].in_reply_to).toBe('m1');
+  });
+});
+
+
+describe('internal provider status results', () => {
+  it('classifies context compaction notices as internal status', () => {
+    expect(isInternalStatusResult('Context compacted (132,573 tokens compacted).')).toBe(true);
+  });
+
+  it('does not classify normal bare text as internal status', () => {
+    expect(isInternalStatusResult('I forgot the message wrapper')).toBe(false);
   });
 });
 

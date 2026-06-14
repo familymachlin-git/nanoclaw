@@ -46,6 +46,17 @@ const DEFAULT_SETTINGS_JSON =
  * spawn by `composeGroupClaudeMd()` (see `claude-md-compose.ts`). Initial
  * per-group instructions (if provided) seed `CLAUDE.local.md`.
  */
+
+/** True if CLAUDE.local.md exists as a file or symlink (even when dangling on host). */
+function groupLocalClaudeMdPresent(localFile: string): boolean {
+  try {
+    fs.lstatSync(localFile);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function initGroupFilesystem(group: AgentGroup, opts?: { instructions?: string }): void {
   const initialized: string[] = [];
 
@@ -59,7 +70,7 @@ export function initGroupFilesystem(group: AgentGroup, opts?: { instructions?: s
   // groups/<folder>/CLAUDE.local.md — per-group agent memory, auto-loaded by
   // Claude Code. Seeded with caller-provided instructions on first creation.
   const claudeLocalFile = path.join(groupDir, 'CLAUDE.local.md');
-  if (!fs.existsSync(claudeLocalFile)) {
+  if (!groupLocalClaudeMdPresent(claudeLocalFile)) {
     const body = opts?.instructions ? opts.instructions + '\n' : '';
     fs.writeFileSync(claudeLocalFile, body);
     initialized.push('CLAUDE.local.md');

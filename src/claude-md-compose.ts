@@ -40,6 +40,17 @@ const COMPOSED_HEADER = '<!-- Composed at spawn — do not edit. Edit CLAUDE.loc
  * fragments, and MCP server fragments declared in `container.json`. Creates
  * an empty `CLAUDE.local.md` if missing.
  */
+
+/** True if CLAUDE.local.md exists as a file or symlink (even when dangling on host). */
+function groupLocalClaudeMdPresent(localFile: string): boolean {
+  try {
+    fs.lstatSync(localFile);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function composeGroupClaudeMd(group: AgentGroup): void {
   const groupDir = path.resolve(GROUPS_DIR, group.folder);
   if (!fs.existsSync(groupDir)) {
@@ -126,11 +137,12 @@ export function composeGroupClaudeMd(group: AgentGroup): void {
   for (const name of [...desired.keys()].sort()) {
     imports.push(`@./.claude-fragments/${name}`);
   }
+
   const body = [COMPOSED_HEADER, ...imports, ''].join('\n');
   writeAtomic(path.join(groupDir, 'CLAUDE.md'), body);
 
   const localFile = path.join(groupDir, 'CLAUDE.local.md');
-  if (!fs.existsSync(localFile)) {
+  if (!groupLocalClaudeMdPresent(localFile)) {
     fs.writeFileSync(localFile, '');
   }
 }
@@ -171,7 +183,7 @@ export function migrateGroupsToClaudeLocal(): void {
 
     const claudeMd = path.join(groupDir, 'CLAUDE.md');
     const claudeLocal = path.join(groupDir, 'CLAUDE.local.md');
-    if (fs.existsSync(claudeMd) && !fs.existsSync(claudeLocal)) {
+    if (fs.existsSync(claudeMd) && !groupLocalClaudeMdPresent(claudeLocal)) {
       fs.renameSync(claudeMd, claudeLocal);
       actions.push(`${entry.name}/CLAUDE.md → CLAUDE.local.md`);
     }
