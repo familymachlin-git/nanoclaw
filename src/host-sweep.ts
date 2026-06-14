@@ -65,7 +65,7 @@ const SWEEP_INTERVAL_MS = 60_000;
 export const ABSOLUTE_CEILING_MS = 30 * 60 * 1000;
 // Stuck tolerance window applied per 'processing' claim — "did we see any
 // signs of life since this message was claimed?"
-export const CLAIM_STUCK_MS = 60 * 1000;
+export const CLAIM_STUCK_MS = Number(process.env.NANOCLAW_CLAIM_STUCK_MS || 180000); // claim-stuck-tolerance: 1 GB VM cold start can take ~95s before first heartbeat (was 60 * 1000)
 const MAX_TRIES = 5;
 const BACKOFF_BASE_MS = 5000;
 

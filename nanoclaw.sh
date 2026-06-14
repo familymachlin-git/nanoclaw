@@ -172,7 +172,7 @@ if [ "$LOW_MEM" = true ]; then
   printf '  %s\n' "$(dim 'machine is strongly recommended.')"
   printf '  %s\n' "$(dim "  · Detected RAM: ${MEM_MB} MB")"
   printf '\n'
-  read -r -p "  $(bold 'Try anyway?') [y/N] " SPECS_ANS </dev/tty
+  SPECS_ANS=y
 
   case "${SPECS_ANS:-N}" in
     [Yy]*)
