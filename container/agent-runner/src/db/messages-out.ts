@@ -46,6 +46,36 @@ export function writeMessageOut(msg: WriteMessageOut): number {
   const outbound = getOutboundDb();
   const inbound = getInboundDb();
 
+  // Duplicate-suppression guard.
+  // In one turn the agent can deliver the same chat text twice — once via the
+  // send_message MCP tool and again in its final <message> reply — producing
+  // two identical WhatsApp messages. Prompt rules don't reliably prevent this,
+  // so drop a chat message whose (platform_id, thread_id, content) exactly
+  // matches one already written within the dedup window and reuse its seq.
+  // Window is env-overridable (NANOCLAW_OUTBOUND_DEDUP_SEC, 0 disables).
+  if (msg.kind === 'chat' && msg.content) {
+    const windowSec = Number(process.env.NANOCLAW_OUTBOUND_DEDUP_SEC ?? '60');
+    if (Number.isFinite(windowSec) && windowSec > 0) {
+      const dup = outbound
+        .prepare(
+          `SELECT seq FROM messages_out
+           WHERE kind = 'chat'
+             AND content = $content
+             AND IFNULL(platform_id, '') = IFNULL($platform_id, '')
+             AND IFNULL(thread_id, '') = IFNULL($thread_id, '')
+             AND timestamp >= datetime('now', $window)
+           ORDER BY seq DESC LIMIT 1`,
+        )
+        .get({
+          $content: msg.content,
+          $platform_id: msg.platform_id ?? null,
+          $thread_id: msg.thread_id ?? null,
+          $window: `-${windowSec} seconds`,
+        }) as { seq: number } | undefined;
+      if (dup) return dup.seq;
+    }
+  }
+
   // Read max seq from both DBs to maintain global ordering.
   // Safe: each side only reads the other DB, never writes to it.
   const maxOut = (outbound.prepare('SELECT COALESCE(MAX(seq), 0) AS m FROM messages_out').get() as { m: number }).m;
