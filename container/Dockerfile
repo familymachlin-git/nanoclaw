@@ -27,10 +27,12 @@ ARG BUN_VERSION=1.3.12
 # ---- System dependencies -----------------------------------------------------
 # tini: correct PID 1 / signal forwarding so outbound.db writes finalize on
 # SIGTERM instead of being orphaned by the shell entrypoint.
+# ffmpeg + Python support repo-backed voice-note transcription helpers.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
         chromium \
+        ffmpeg \
         fonts-liberation \
         fonts-noto-color-emoji \
         libgbm1 \
@@ -49,11 +51,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         ca-certificates \
         curl \
         git \
+        python3 \
+        python3-pip \
         tini \
         unzip \
     && if [ "$INSTALL_CJK_FONTS" = "true" ]; then \
         apt-get install -y --no-install-recommends fonts-noto-cjk; \
        fi \
+    && python3 -m pip install --no-cache-dir --break-system-packages faster-whisper==1.2.1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Chromium path for agent-browser / Playwright consumers
