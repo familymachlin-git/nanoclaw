@@ -373,18 +373,13 @@ registerChannelAdapter('whatsapp', {
       if (cached && cached.expiresAt > Date.now()) return cached.metadata;
 
       const metadata = await sock.groupMetadata(jid);
-      const participants = await Promise.all(
-        metadata.participants.map(async (p) => ({
-          ...p,
-          id: await translateJid(p.id),
-        })),
-      );
-      const normalized = { ...metadata, participants };
+      // Baileys uses this cache for encryption/addressing. Preserve WhatsApp's
+      // participant IDs exactly; translating LIDs here breaks group sends.
       groupMetadataCache.set(jid, {
-        metadata: normalized,
+        metadata,
         expiresAt: Date.now() + GROUP_METADATA_CACHE_TTL_MS,
       });
-      return normalized;
+      return metadata;
     }
 
     async function syncGroupMetadata(force = false): Promise<void> {
